@@ -1,0 +1,10 @@
+names = LOAD 'hdfs:/user/maria_dev/pigtest/Master.csv' using PigStorage(',');
+real = FILTER names BY $1>0 AND $2>0;
+birth_data = FOREACH real GENERATE $0 AS id, $1 AS year, $2 AS month;
+group_by_yr_mth = GROUP birth_data BY (month,year);
+Count_data = FOREACH group_by_yr_mth GENERATE group, COUNT(birth_data.id) as persons;
+ranked = rank Count_data by persons desc DENSE;
+TOP3 = FILTER ranked BY $0<4; 
+Out_of_tuple = FOREACH TOP3 GENERATE $0,flatten($1);
+Get_yr_mth = FOREACH Out_of_tuple GENERATE CONCAT($1, '/',$2);
+DUMP Get_yr_mth;

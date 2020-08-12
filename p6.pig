@@ -1,0 +1,21 @@
+F = LOAD 'hdfs:/user/maria_dev/pigtest/Fielding.csv' USING PigStorage(',');
+filter1 = FILTER F BY $1>2004 AND $1<2010;
+filter2 = FILTER filter1 BY NOT ($6 == '' AND $7 == '' AND $8 == '' AND $9 == '' AND $10 == '' AND $11 == '' 
+AND $12 == '' AND $13 == '' AND $14 == '' AND $15 == '' AND $16 == '');
+Fielding_data = FOREACH filter2 GENERATE $0 AS id, $1 AS year, $2 AS team, $5 AS games, $10 AS errors;
+grouped = GROUP Fielding_data BY id;
+five_yr_sum = FOREACH grouped GENERATE group, SUM(Fielding_data.games) AS total_g, SUM(Fielding_data.errors) AS total_e;
+filter3 = FILTER five_yr_sum  BY total_g >19;
+B = LOAD 'hdfs:/user/maria_dev/pigtest/Batting.csv' using PigStorage(',');
+B_filter1 = FILTER B BY $1>2004 AND $1<2010;
+B_data = FOREACH B_filter1 GENERATE $0 AS id, $1, $2, $7 AS Hits, $5 AS AB;
+grouped_by_id = GROUP B_data By id;
+five_yr_sum2 = FOREACH grouped_by_id GENERATE group, SUM(B_data.Hits) AS total_h, SUM(B_data.AB) AS total_ab;
+B_filter3 = FILTER five_yr_sum2  BY total_ab >39;
+joined_f = JOIN filter3 BY $0, B_filter3 BY $0;
+Nicer = FOREACH joined_f GENERATE $0 AS id,$1 AS G,$2 AS E,$4 AS H,$5 AS AB;
+equation = FOREACH Nicer GENERATE $0 AS id, (H/AB - E/G) AS score;
+ranked = rank equation BY score DESC DENSE;
+topthree = FILTER ranked BY $0<4;
+get_id = FOREACH topthree GENERATE $1;
+DUMP get_id;

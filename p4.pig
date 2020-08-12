@@ -1,0 +1,10 @@
+F = LOAD 'hdfs:/user/maria_dev/pigtest/Fielding.csv' using PigStorage(',');
+target = FILTER F BY $1>1950;
+errors_data = FOREACH target GENERATE $1 AS year, $2 AS team, $10 as errors;
+group_by_year = GROUP errors_data BY (year,team);
+errors_each_yr = FOREACH group_by_year GENERATE group, SUM(errors_data.errors) AS errors_sum;
+ranked = rank errors_each_yr BY errors_sum DESC DENSE;
+top1 = FILTER ranked BY $0 <2;
+out = FOREACH top1 GENERATE $0,FLATTEN($1);
+get_team = FOREACH out GENERATE $2;
+DUMP get_team;

@@ -1,0 +1,13 @@
+batters = LOAD 'hdfs:/user/maria_dev/pigtest/Batting.csv' using PigStorage(',');
+real = FILTER batters BY $11 >0;
+target = FOREACH real GENERATE $0 AS id, $11 AS RBI;
+group_by_id = GROUP target BY id;
+id_runs = FOREACH group_by_id GENERATE group,SUM(target.RBI) as runs;
+names = LOAD 'hdfs:/user/maria_dev/pigtest/Master.csv' using PigStorage(',');
+master_data = FOREACH names GENERATE $0 AS id, $6 as birthcity;
+join_f = JOIN id_runs BY $0, master_data BY id;
+nicer = FOREACH join_f GENERATE $0, $1 as runs, $3 as birthcity;
+ranked = rank nicer by runs DESC DENSE;
+top1 = FILTER ranked BY $0 <2;
+get_city = FOREACH top1 GENERATE $3;
+DUMP get_city;
